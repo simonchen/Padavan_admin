@@ -8,13 +8,14 @@
 */
 
 $api = true;
+$root='/tmp/AdminLTE';
 
-require 'scripts/pi-hole/php/password.php';
+require $root.'/scripts/pi-hole/php/password.php';
 
 header('Content-Type: text/html; charset=utf-8');
-require 'scripts/pi-hole/php/database.php';
-require 'scripts/pi-hole/php/auth.php';
-require_once 'scripts/pi-hole/php/func.php';
+require $root.'/scripts/pi-hole/php/database.php';
+require $root.'/scripts/pi-hole/php/auth.php';
+require_once $root.'/scripts/pi-hole/php/func.php';
 check_cors();
 
 // Set maximum execution time to 10 minutes
