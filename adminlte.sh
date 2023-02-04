@@ -27,5 +27,9 @@ ln -s $ex_path/pihole-FTL.conf /etc/pihole/pihole-FTL.conf
 #customized scripts
 rm -f /etc/pihole/pihole-FTL.db
 ln -s $custom_dir/pihole-FTL.db /etc/pihole/pihole-FTL.db
+rm -f $ex_path/scripts/api_padavan.php
+ln -s $custom_dir/api_padavan.php $ex_path/scripts/api_padavan.php
+rm -f $ex_path/scripts/ss.php
+ln -s $custom_dir/ss.php $ex_path/scripts/ss.php
 rm -f $ex_path/scripts/pi-hole/php/sysinfo.php
 ln -s $custom_dir/scripts/pi-hole/php/sysinfo.php $ex_path/scripts/pi-hole/php/sysinfo.php
