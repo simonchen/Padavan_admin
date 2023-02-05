@@ -8,14 +8,13 @@
 */
 
 $api = true;
-$root='/tmp/AdminLTE';
 
-require $root.'/scripts/pi-hole/php/password.php';
+require 'scripts/pi-hole/php/password.php';
 
 header('Content-Type: text/html; charset=utf-8');
-require $root.'/scripts/pi-hole/php/database.php';
-require $root.'/scripts/pi-hole/php/auth.php';
-require_once $root.'/scripts/pi-hole/php/func.php';
+require 'scripts/pi-hole/php/database.php';
+require 'scripts/pi-hole/php/auth.php';
+require_once 'scripts/pi-hole/php/func.php';
 check_cors();
 
 // Set maximum execution time to 10 minutes
@@ -31,10 +30,18 @@ $db = SQLite3_connect($QUERYDB, SQLITE3_OPEN_READWRITE);
 
 // Refers to native SQL at https://github.com/pi-hole/FTL/blob/master/test/pihole-FTL.db.sql
 function init($db){
+  # message table
   $stmt=$db->prepare("DROP TABLE IF EXISTS message");
   $results=$stmt->execute();
   $stmt=$db->prepare("CREATE TABLE message (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp INTEGER NOT NULL, type TEXT NOT NULL, message TEXT NOT NULL, blob1 BLOB, blob2 BLOB, blob3 BLOB, blob4 BLOB, blob5 BLOB);");
   $results=$stmt->execute();
+
+  # ss_config table
+  $stmt=$db->prepare("DROP TABLE IF EXISTS ss_config");
+  $results=$stmt->execute();
+  $stmt=$db->prepare("CREATE TABLE ss_config (id INTEGER PRIMARY KEY AUTOINCREMENT, date_added INTEGER NOT NULL, date_modified, protocol TEXT NOT NULL, name TEXT NOT NULL, link TEXT NOT NULL, json TEXT NOT NULL);");
+  $results=$stmt->execute();
+
 
   echo "Database is initialized.";
 }
