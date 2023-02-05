@@ -25,11 +25,21 @@ rm -f /etc/pihole/pihole-FTL.conf
 ln -s $ex_path/pihole-FTL.conf /etc/pihole/pihole-FTL.conf
 
 #customized scripts
+rm -f $ex_path/init_db.php
+ln -s $custom_dir/init_db.php $ex_path/init_db.php
 rm -f /etc/pihole/pihole-FTL.db
 ln -s $custom_dir/pihole-FTL.db /etc/pihole/pihole-FTL.db
-rm -f $ex_path/scripts/api_padavan.php
-ln -s $custom_dir/api_padavan.php $ex_path/scripts/api_padavan.php
-rm -f $ex_path/scripts/ss.php
-ln -s $custom_dir/ss.php $ex_path/scripts/ss.php
+rm -f $ex_path/api_padavan.php
+ln -s $custom_dir/api_padavan.php $ex_path/api_padavan.php
+rm -f $ex_path/ss.php
+ln -s $custom_dir/ss.php $ex_path/ss.php
 rm -f $ex_path/scripts/pi-hole/php/sysinfo.php
 ln -s $custom_dir/scripts/pi-hole/php/sysinfo.php $ex_path/scripts/pi-hole/php/sysinfo.php
+rm -f $ex_path/scripts/pi-hole/php/ss_config.php
+ln -s $custom_dir/scripts/pi-hole/php/ss_config.php $ex_path/scripts/pi-hole/php/ss_config.php
+
+#Padavan shell scripts
+rm -f $ex_path/sh_link.sh
+chmod +x $custom_dir/sh_link.sh && ln -s $custom_dir/sh_link.sh $ex_path/sh_link.sh
+rm -f $ex_path/padavan.sh
+chmod +x $custom_dir/padavan.sh && ln -s $custom_dir/padavan.sh $ex_path/padavan.sh
