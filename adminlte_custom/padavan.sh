@@ -16,7 +16,7 @@ link_de_protocol "$link_tmp" "0ss0ssr0"
 if [ "$link_protocol" != "ss" ] && [ "$link_protocol" != "ssr" ] ; then
   exit 1
 fi
-logger -t "【ss】" "应用 $link_protocol 配置： $link_name"
+#logger -t "【ss】" "应用 $link_protocol 配置： $link_name"
 if [ "$link_protocol" == "ss" ] ; then
 ss_type=0
 fi
@@ -62,7 +62,15 @@ case "$1" in
   decode_ss_ssr_link)
     decode_ss_ssr_link "$2"
     ;;
+  save_storage)
+    pgrep bzip | xargs kill >/dev/null 2>&1
+    pgrep mtd_storage.sh | xargs kill >/dev/null 2>&1
+    pgrep mtd_write | xargs kill >/dev/null 2>&1
+    logger -t "【正在保存数据到闪存...】" "请勿关机或重启！"
+    /sbin/mtd_storage.sh save
+    ogger -t "【保存数据到闪存】" "成功！"
+    ;;
   *)
-  echo "Usage: $0 {decode_ss_ssr_link} {link}"
+  echo "Usage: $0 {decode_ss_ssr_link|save_storage}"
   exit 1
 esac 
