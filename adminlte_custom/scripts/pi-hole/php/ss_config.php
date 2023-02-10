@@ -18,11 +18,47 @@ if (!isset($api)) {
     }
 }
 
+$ss_json = null;
 $reload = false;
 
 $GRAVITYDB = getQueriesDBFilename();
 $db = SQLite3_connect($GRAVITYDB, SQLITE3_OPEN_READWRITE);
 
+function save_to_store($filename, $content){
+  global $doc_root;
+  $ok = false;
+  $store_dir = "/etc/storage/padavan";
+  if (!file_exists($store_dir)){
+    mkdir($store_dir);
+  }
+  $file = fopen("$store_dir/$filename", "w");
+  if ($file){
+    fwrite($file, $content);
+    fclose($file);
+    $ok = true;
+  }
+  shell_exec($doc_root."/padavan.sh save_storage >/dev/null 2>&1 &");
+  return $ok;
+}
+
+function del_from_store($filename) {
+  global $doc_root;
+  $store_dir = "/etc/storage/padavan";
+  if (file_exists("$store_dir/$filename")){
+    unlink("$store_dir/$filename");
+  }
+  shell_exec($doc_root."/padavan.sh save_storage >/dev/null 2>&1 &");  
+}
+
+function set_nvram ($nvram)
+{
+  if (!is_array($nvram)) return;
+
+  foreach($nvram as $k=>$v){
+    shell_exec("nvram set ".$k."=".$v);
+  }
+  shell_exec("nvram commit");
+}
 function verify_ID_array($arr)
 {
     if (!is_array($arr)) {
@@ -55,13 +91,8 @@ if ($_POST['action'] == 'get_groups') {
     // Add new ss config [padavan] //TODO
     try {
         $input = html_entity_decode(trim($_POST['name']));
-        $links = str_getcsv($input, '\r\n'); // padavan: each ss(ssr) link is separated with new line
-	$cmd = $doc_root."/padavan.sh decode_ss_ssr_link ".$links[0];
-	$result = shell_exec($cmd);
-	//echo $result;
-	//exit;
-        //$total = count($links);
-        //$added = 0;
+        $links = explode(PHP_EOL, $input); // padavan: each ss(ssr) link is separated with new line
+        
 	$rows = array();
 	foreach ($links as $link) {
 		$result = shell_exec($doc_root."/padavan.sh decode_ss_ssr_link ".$link);
@@ -74,13 +105,14 @@ if ($_POST['action'] == 'get_groups') {
 	
 	$total = count($rows);
 	$added = 0;
-        $stmt = $db->prepare('INSERT INTO "ss_config" (date_added,date_modified,protocol,name,link,json) VALUES (:date_added,:date_modified,:protocol,:name,:link,:json)');
+        $stmt = $db->prepare('INSERT INTO "ss_config" (date_added,date_modified,enabled,protocol,name,link,json) VALUES (:date_added,:date_modified,:enabled,:protocol,:name,:link,:json)');
         if (!$stmt) {
             throw new Exception('While preparing statement: '.$db->lastErrorMsg());
         }
 	$ts = time();
 	$stmt->bindValue(':date_added', $ts, SQLITE3_INTEGER);
 	$stmt->bindValue(':date_modified', $ts, SQLITE3_INTEGER);
+	$stmt->bindValue(':enabled', 0, SQLITE3_INTEGER);
 /*
         $desc = $_POST['desc'];
         if (strlen($desc) === 0) {
@@ -110,25 +142,34 @@ if ($_POST['action'] == 'get_groups') {
                 throw new Exception('While binding json: <strong>'.$db->lastErrorMsg().'</strong><br>Added '.$added.' out of '.$total.' links');
             }
 
-
+            
             if (!$stmt->execute()) {
                 throw new Exception('While executing: <strong>'.$db->lastErrorMsg().'</strong><br>Added '.$added.' out of '.$total.' links');
             }
             ++$added;
         }
 
-        $reload = true;
+        //$reload = true;
         JSON_success();
     } catch (\Exception $ex) {
         JSON_error($ex->getMessage());
     }
-} elseif ($_POST['action'] == 'edit_group') {
+} elseif ($_POST['action'] == 'enable_ss') {
     // Edit group identified by ID
     try {
         $name = html_entity_decode($_POST['name']);
-        $desc = html_entity_decode($_POST['desc']);
+        //$desc = html_entity_decode($_POST['desc']);
 
-        $stmt = $db->prepare('UPDATE "group" SET enabled=:enabled, name=:name, description=:desc WHERE id = :id');
+	// Disabling all ss-config
+	$db->querySingle('UPDATE "ss_config" SET enabled=0');
+
+	if (!isset($_POST['id'])){
+            $id = 0;
+	}else{
+            $id = $_POST['id'];
+	}
+
+        $stmt = $db->prepare('UPDATE "ss_config" SET enabled=:enabled, name=:name WHERE id = :id');
         if (!$stmt) {
             throw new Exception('While preparing statement: '.$db->lastErrorMsg());
         }
@@ -141,7 +182,7 @@ if ($_POST['action'] == 'get_groups') {
         if (!$stmt->bindValue(':name', $name, SQLITE3_TEXT)) {
             throw new Exception('While binding name: '.$db->lastErrorMsg());
         }
-
+/*
         if (strlen($desc) === 0) {
             // Store NULL in database for empty descriptions
             $desc = null;
@@ -149,8 +190,8 @@ if ($_POST['action'] == 'get_groups') {
         if (!$stmt->bindValue(':desc', $desc, SQLITE3_TEXT)) {
             throw new Exception('While binding desc: '.$db->lastErrorMsg());
         }
-
-        if (!$stmt->bindValue(':id', intval($_POST['id']), SQLITE3_INTEGER)) {
+*/
+        if (!$stmt->bindValue(':id', intval($id), SQLITE3_INTEGER)) {
             throw new Exception('While binding id: '.$db->lastErrorMsg());
         }
 
@@ -158,12 +199,32 @@ if ($_POST['action'] == 'get_groups') {
             throw new Exception('While executing: '.$db->lastErrorMsg());
         }
 
+	//$ss_json = $db->querySingle('SELECT json FROM "ss_config" where enabled = 1 and id = '.$id);
         $reload = true;
         JSON_success();
     } catch (\Exception $ex) {
         JSON_error($ex->getMessage());
     }
-} elseif ($_POST['action'] == 'delete_group') {
+}elseif ($_POST['action'] == 'enable_tproxy') {
+    try {
+        $nvram = array("ss_mode_x"=>$_POST["ss_mode_x"], 
+	  "ss_dnsproxy_x"=>$_POST["ss_dnsproxy_x"],
+          "ss_pdnsd_all"=>$_POST["ss_pdnsd_all"],
+          "app_113"=>$_POST["app_113"],
+	  "ss_multiport"=>$_POST["ss_multiport"],
+	  "ss_threads"=>$_POST["ss_threads"]);
+        set_nvram($nvram);
+	$nvram_cfg = "";
+	foreach ($nvram as $k=>$v){
+	  $nvram_cfg .= $k."=".$v."\n";
+        }
+	save_to_store("nvram_cfg.txt", $nvram_cfg);
+        $reload = true;
+        JSON_success();
+    } catch (\Exception $ex) {
+	JSON_error($ex->getMessage());
+    } 
+}elseif ($_POST['action'] == 'delete_group') {
     // Delete group identified by ID
     try {
         $ids = json_decode($_POST['id']);
@@ -1193,6 +1254,21 @@ if ($_POST['action'] == 'get_groups') {
 }
 // Reload lists in pihole-FTL after having added something
 if ($reload) {
+    $ss_json = $db->querySingle('SELECT json FROM "ss_config" where enabled = 1');
+    $json_file = "padavan_ss_redir.txt";
+    
+    if (is_string($ss_json) && strlen($ss_json) > 0){
+	if (save_to_store($json_file, $ss_json)){
+            set_nvram(array("ss_enable"=>"0")); // don't use default setting
+	    shell_exec("killall ss-redir");
+        }else{
+	    JSON_error("Couldn't create SS/SSR json!");
+        }
+    }else{
+	del_from_store($json_file);
+	set_nvram(array("ss_enable"=>"0")); // don't use the default setting
+        shell_exec("killall ss-redir");
+    }
     //$output = pihole_execute('restartdns reload-lists');
     //TODO. later on , we'll add extra codes for restarting Shadowsocks.
 }

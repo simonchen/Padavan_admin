@@ -13,7 +13,7 @@ function getMemUsage()
                 $meminfo[$expl[0]] = intval(trim(substr($expl[1], 0, -3)));
             }
         }
-        $memused = $meminfo['MemTotal'] - $meminfo['MemFree'] - $meminfo['Buffers'] - $meminfo['Cached'];
+        $memused = $meminfo['MemFree'] + $meminfo['Buffers'] + $meminfo['Cached'];
         $memusage = $memused / $meminfo['MemTotal'];
     } else {
         $memusage = -1;
@@ -34,7 +34,10 @@ function getCpuLoads() {
 // Get number of processing units available to PHP
 // (may be less than the number of online processors)
 function getCpuInfo() {
-  $nproc = shell_exec('nproc');
+  //$nproc = shell_exec('nproc');
+  $sed = "s/CPU:([^%]+)%.*/\\1/";
+  $cmd = "top -n1 -b |  sed -e 's/ //g' | grep -E \"^CPU\" | sed -E '".$sed."'";
+  $usage = trim(shell_exec($cmd), PHP_EOL);
   $bogo = '';
   $cpuinfo = array();
   //if (!is_numeric($nproc)) {
@@ -43,7 +46,7 @@ function getCpuInfo() {
     $nproc = count($matches[0]);
     preg_match('/^(BogoMIPS)\s+?:\s+?([\d\.]+)/m', $cpuinfo, $matches);
     $bogo = $matches[2];
-    $cpuinfo = array("cores"=>$nproc, "bogo"=>$bogo);
+    $cpuinfo = array("cores"=>$nproc, "bogo"=>$bogo, "usage"=>$usage);
   //}
 
   return $cpuinfo;
@@ -58,7 +61,11 @@ function getCpuInfo() {
 //echo json_encode($cpuinfo);
 
 function getSysInfo() {
-  $sysinfo = array("memory_usage"=>getMemUsage(), "loads"=>getCpuLoads(), "cpu"=>getCpuInfo());
+  $led="";
+  if (file_exists("/tmp/padavan_led_status")){
+    $led = trim(shell_exec("cat /tmp/padavan_led_status"), PHP_EOL);
+  }
+  $sysinfo = array("memory_usage"=>getMemUsage(), "loads"=>getCpuLoads(), "cpu"=>getCpuInfo(), "led"=>$led);
   return $sysinfo;
 }
 //echo json_encode($sysinfo);
