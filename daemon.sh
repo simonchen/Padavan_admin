@@ -39,14 +39,13 @@ if [[ -z "$server" || -z "$ports" || -z "$key" ]]; then
   fi
 fi
 
-myname="padavan"
-daemon_sh="$myname-d.sh"
-daemon_status="$myname-d.status"
-daemon_sub_sh="$myname-ds.sh"
-daemon_sub_status="$myname-ds.status"
+daemon_sh="padavan-d.sh"
+daemon_status="padavan-d.status"
+daemon_sub_sh="padavan-ds.sh"
+daemon_sub_status="padavan-ds.status"
 
 # Reset daemon 
-pgrep $myname | xargs kill >/dev/nulll 2>&1 
+pgrep padavan | xargs kill >/dev/nulll 2>&1 
 rm -f /tmp/$daemon_sub_status 
 rm -f /tmp/$daemon_status
 
@@ -418,22 +417,35 @@ while true; do
     ln -s /etc/storage/script/sh_ss_tproxy.sh /opt/bin/ss_tproxy
   fi
 
-  if [[ -z "$(pgrep udp2raw)" && -f "$basedir/udp2raw" ]]; then
+  kcptun=
+  udp2raw=
+  ssredir=
+  nginx=
+  php8fmp=
+  padavand=
+  padavands=
+  ttyd=
+  mtdwrite=
+  mtdstorage=
+
+  eval `ps | awk '/udp2raw/ || /kcptun/ || /ss-redir/ || /nginx/ || /php8-fpm/p || /padavan-d.sh/ || /padavan-ds.sh/ || /ttyd/ || /mtd_write/ || /mtd_storage/ {print $5"="$1}' | sed -E 's/\{(.+)\}/\1/' | sed -E 's/\[(.+)\]/\1/' | sed -E 's/\/.*\/|[^0-9a-zA-Z\=]//' | sed -E 's/.sh//' | grep -v 'awk'`
+
+  if [[ -z "$udp2raw" && -f "$basedir/udp2raw" ]]; then
     logger -t "【 本地应用守护】" "udp2raw没有启动, 重新开始!"
     start_sub_daemon
   fi
-  if [ -z "$(pgrep $daemon_sub_sh)" ]; then
+  if [ -z "$padavands" ]; then
     logger -t "【 sub-daemon 本地应用守护】" "没有启动, 重新开始!"
     start_sub_daemon
   fi
-  if [[ -z "$(pgrep kcptun)" && -f "$basedir/kcptun" ]]; then
+  if [[ -z "$kcptun" && -f "$basedir/kcptun" ]]; then
     logger -t "【 本地应用守护】" "kcptun没有启动, 重新开始!"
     start_kcptun
   fi
-  if [ -z "$(pgrep ss-redir)" ]; then
+  if [ -z "$ssredir)" ]; then
     start_ss
   fi
-  if [[ ! -z "$(pgrep ss-redir)" && "$(iptables -L -t nat | grep SSTP_WAN | wc -l)" -eq "0" ]]; then
+  if [[ ! -z "$ssredir" && "$(iptables -L -t nat | grep SSTP_WAN | wc -l)" -eq "0" ]]; then
     logger -t "【 本地应用守护】" "ss_tproxy没有启动, 重新开始!"
     start_ss_tproxy
   fi
@@ -455,22 +467,22 @@ while true; do
     logger -t "【ntpd时间同步】" "$LOGTIME"
   fi
 
-  if [[ -z "$(pgrep php8-fpm)" && -f "/opt/bin/php8-fpm" ]]; then
+  if [[ -z "$php8fpm" && -f "/opt/bin/php8-fpm" ]]; then
     logger -t "【 本地应用守护】" "php8-fpm没有启动，重新开始!"
-    php8-fpm -R -y /opt/etc/php8-fpm.d/www.conf
+    php8-fpm -R -y /opt/etc/php8-fpm.d/www.conf >/dev/null 2>&1 &
   fi
   
-  if [[ -z "$(pgrep nginx)" && -f "/opt/bin/nginx" ]]; then
+  if [[ -z "$nginx" && -f "/opt/bin/nginx" ]]; then
     logger -t "【 本地应用守护】" "nginx没有启动，重新开始!"
-    nginx
+    nginx >/dev/null 2>&1 &
   fi
 
-  if [[ -z "$(pgrep shellinaboxd)" && -f "/opt/bin/shellinaboxd" ]]; then
-    logger -t "【 本地应用守护】" "shellinabox没有启动，重新开始!"
-    /opt/bin/shellinaboxd -b --user=admin --css=$basedir/shellinabox/custom.css -f /favicon.ico:$basedir/shellinabox/favicon.ico -t
+  if [[ -z "$ttyd" && -f "/usr/bin/ttyd" ]]; then
+    logger -t "【 本地应用守护】" "ttyd没有启动，重新开始!"
+    /usr/bin/ttyd -p 4200 login >/dev/null 2>&1 &
   fi
 
-  if [[ ! -z "$(pgrep mtd_write)" || ! -z "$(pgrep mtd_storage.sh)" ]]; then
+  if [[ ! -z "$mtdwrite" || ! -z "$mtdstorage" ]]; then
     write_led_status "blue_flash"
     blink_blue 10
   fi
@@ -522,7 +534,14 @@ while true; do
     logger -t "【main-daemon守护】" "已经运行$total_mins分钟, 自重启."
     killall $daemon_sh >/dev/null 2>&1
   fi
-
+  
+  if [ "$(led_blue_state)" == "on" ]; then
+    write_led_status "blue"
+  elif [ "$(led_yellow_state)" == "on" ]; then
+    write_led_status "yellow"
+  elif [ "$(led_red_state)" == "on" ]; then
+    write_led_status "red"
+  fi
 done
 EOF
 

@@ -11,8 +11,8 @@ chmod +x $basedir/daemon.sh && $basedir/daemon.sh
 logger -t "【Padavan-环境配置】" "nginx/php-fpm"
 chmod +x $basedir/nginx_php/setup.sh && $basedir/nginx_php/setup.sh restart
 
-logger -t "【Padavan-环境配置】" "shellinabox网页终端"
-chmod +x $basedir/shellinabox/setup.sh && $basedir/shellinabox/setup.sh restart http
+#logger -t "【Padavan-环境配置】" "shellinabox网页终端"
+#chmod +x $basedir/shellinabox/setup.sh && $basedir/shellinabox/setup.sh restart http
 
 logger -t "【Padavan-安装定制Web服务】" "设置web服务根目录/home/root/www > /tmp/AdminLTE"
 
