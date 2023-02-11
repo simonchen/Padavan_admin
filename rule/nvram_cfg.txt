@@ -1,0 +1,6 @@
+ss_mode_x=0
+ss_dnsproxy_x=0
+ss_pdnsd_all=0
+app_113=0
+ss_multiport="22,2222,80,443,3389,7500"
+ss_threads=1
